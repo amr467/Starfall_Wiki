@@ -1,7 +1,8 @@
 import os, re, json
 
 CONTENT_DIR = "content"
-OUTPUT_FILE = os.path.join(CONTENT_DIR, "graph.md")
+STATIC_DIR = "static"
+OUTPUT_FILE = os.path.join(STATIC_DIR, "graph.html")
 
 COLORS = {
     "Champion": "#c084fc",
@@ -76,14 +77,22 @@ edges_list = [{"source": a, "target": b} for a, b in edges]
 nodes_json = json.dumps(nodes)
 edges_json = json.dumps(edges_list)
 
-output = f"""---
-title: Concept Map
-tags: [Graph, Meta]
----
-
-<div style="font-family:sans-serif;">
-<div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 0 6px;align-items:center;">
-  <select id="fg" style="font-size:13px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;">
+output = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concept Map — The Starfall Universe</title>
+<style>
+body{{margin:1rem 2rem;font-family:sans-serif;background:#161618;color:#ebebec;}}
+select,input,button{{font-size:13px;padding:4px 8px;border:1px solid #393639;border-radius:4px;background:#1e1e20;color:#ebebec;}}
+button{{cursor:pointer;}}
+</style>
+</head>
+<body>
+<h1 style="font-size:1.4rem;margin-bottom:1rem;">Concept Map</h1>
+<div style="display:flex;gap:8px;flex-wrap:wrap;padding:0 0 6px;align-items:center;">
+  <select id="fg">
     <option value="all">All categories</option>
     <option value="Champion">Champions</option>
     <option value="Story">Stories</option>
@@ -96,8 +105,8 @@ tags: [Graph, Meta]
     <option value="Concept/Item">Concepts &amp; items</option>
     <option value="Other">Other</option>
   </select>
-  <input id="sq" type="text" placeholder="Search..." style="font-size:13px;width:140px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;" />
-  <button id="btn-rst" style="font-size:13px;padding:4px 10px;border:1px solid #ccc;border-radius:4px;background:transparent;cursor:pointer;">Reset</button>
+  <input id="sq" type="text" placeholder="Search..." style="width:140px;" />
+  <button id="btn-rst">Reset</button>
   <span style="font-size:12px;color:#888;">Drag · scroll to zoom · click to highlight</span>
 </div>
 <div style="display:flex;gap:10px;flex-wrap:wrap;padding:2px 0 8px;font-size:12px;color:#888;">
@@ -113,17 +122,15 @@ tags: [Graph, Meta]
   <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#94a3b8;margin-right:3px;vertical-align:middle;"></span>Other</span>
 </div>
 <div style="position:relative;">
-<canvas id="gc" style="width:100%;height:600px;border:0.5px solid #ccc;border-radius:8px;cursor:grab;display:block;"></canvas>
-<div id="tip" style="position:absolute;display:none;background:#fff;border:0.5px solid #ccc;border-radius:6px;padding:5px 9px;font-size:12px;pointer-events:none;max-width:200px;z-index:10;"></div>
+<canvas id="gc" style="width:100%;height:600px;border:0.5px solid #393639;border-radius:8px;cursor:grab;display:block;"></canvas>
+<div id="tip" style="position:absolute;display:none;background:#1e1e20;border:0.5px solid #393639;border-radius:6px;padding:5px 9px;font-size:12px;pointer-events:none;max-width:200px;z-index:10;color:#ebebec;"></div>
 </div>
-</div>
-
 <script>
 const NODES={nodes_json};
 const EDGES={edges_json};
 const canvas=document.getElementById('gc');
 const DPR=window.devicePixelRatio||1;
-const W=canvas.parentElement.offsetWidth||680,H=600;
+const W=canvas.parentElement.offsetWidth||900,H=600;
 canvas.width=W*DPR;canvas.height=H*DPR;
 canvas.style.width=W+'px';canvas.style.height=H+'px';
 const ctx=canvas.getContext('2d');ctx.scale(DPR,DPR);
@@ -133,7 +140,7 @@ let ag='all',st='',hl=null,tx=0,ty=0,tk=1,drag=null,doff={{x:0,y:0}},pan=false,p
 function nr(n){{return Math.max(4,Math.min(13,3+n.links*0.55));}}
 function vis(){{return nodes.filter(n=>{{if(ag!=='all'&&n.group!==ag)return false;if(st&&!n.id.toLowerCase().includes(st.toLowerCase()))return false;return true;}});}}
 function tick(){{if(settled)return;const vn=vis();const vs=new Set(vn.map(n=>n.id));const al=Math.max(0.01,0.6-iter*0.004);vn.forEach(a=>{{a.vx+=(W/2-a.x)*0.015*al;a.vy+=(H/2-a.y)*0.015*al;}});for(let i=0;i<vn.length;i++){{for(let j=i+1;j<vn.length;j++){{const a=vn[i],b=vn[j];let dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy,d=Math.sqrt(d2)||0.1,rep=Math.min(800,120*120/d2);a.vx+=dx/d*rep*al;a.vy+=dy/d*rep*al;b.vx-=dx/d*rep*al;b.vy-=dy/d*rep*al;}}}}EDGES.forEach(e=>{{const a=nm[e.source],b=nm[e.target];if(!a||!b||!vs.has(e.source)||!vs.has(e.target))return;let dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||0.1,f=(d-70)*0.06*al;a.vx+=dx/d*f;a.vy+=dy/d*f;b.vx-=dx/d*f;b.vy-=dy/d*f;}});let mv=0;vn.forEach(n=>{{n.vx*=0.75;n.vy*=0.75;n.x+=n.vx;n.y+=n.vy;n.x=Math.max(20,Math.min(W-20,n.x));n.y=Math.max(20,Math.min(H-20,n.y));mv=Math.max(mv,Math.abs(n.vx)+Math.abs(n.vy));}});iter++;if(mv<0.3&&iter>60)settled=true;}}
-function draw(){{ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(tx,ty);ctx.scale(tk,tk);const vn=vis();const vs=new Set(vn.map(n=>n.id));const nb=new Set();if(hl){{EDGES.forEach(e=>{{if(e.source===hl)nb.add(e.target);if(e.target===hl)nb.add(e.source);}})}}ctx.lineWidth=0.7;EDGES.forEach(e=>{{const a=nm[e.source],b=nm[e.target];if(!a||!b||!vs.has(e.source)||!vs.has(e.target))return;ctx.globalAlpha=(!hl||(hl===e.source||hl===e.target))?0.2:0.03;ctx.strokeStyle='#94a3b8';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}});vn.forEach(n=>{{const ih=hl===n.id,inn=nb.has(n.id);ctx.globalAlpha=!hl||ih||inn?1:0.12;ctx.beginPath();ctx.arc(n.x,n.y,nr(n),0,Math.PI*2);ctx.fillStyle=n.color;ctx.fill();if(ih){{ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=2;ctx.stroke();ctx.lineWidth=0.7;}}}});ctx.globalAlpha=1;ctx.font=`${{Math.max(9,10/tk)}}px sans-serif`;ctx.fillStyle='rgba(30,30,30,0.85)';vn.forEach(n=>{{const ih=hl===n.id,inn=nb.has(n.id);if(n.links<=9&&!ih&&!inn)return;ctx.globalAlpha=!hl||ih||inn?1:0.12;ctx.fillText(n.id,n.x+nr(n)+2,n.y+4);}});ctx.restore();}}
+function draw(){{ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(tx,ty);ctx.scale(tk,tk);const vn=vis();const vs=new Set(vn.map(n=>n.id));const nb=new Set();if(hl){{EDGES.forEach(e=>{{if(e.source===hl)nb.add(e.target);if(e.target===hl)nb.add(e.source);}})}}ctx.lineWidth=0.7;EDGES.forEach(e=>{{const a=nm[e.source],b=nm[e.target];if(!a||!b||!vs.has(e.source)||!vs.has(e.target))return;ctx.globalAlpha=(!hl||(hl===e.source||hl===e.target))?0.2:0.03;ctx.strokeStyle='#94a3b8';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}});vn.forEach(n=>{{const ih=hl===n.id,inn=nb.has(n.id);ctx.globalAlpha=!hl||ih||inn?1:0.12;ctx.beginPath();ctx.arc(n.x,n.y,nr(n),0,Math.PI*2);ctx.fillStyle=n.color;ctx.fill();if(ih){{ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=2;ctx.stroke();ctx.lineWidth=0.7;}}}});ctx.globalAlpha=1;ctx.font=`${{Math.max(9,10/tk)}}px sans-serif`;ctx.fillStyle='rgba(235,235,236,0.9)';vn.forEach(n=>{{const ih=hl===n.id,inn=nb.has(n.id);if(n.links<=9&&!ih&&!inn)return;ctx.globalAlpha=!hl||ih||inn?1:0.12;ctx.fillText(n.id,n.x+nr(n)+2,n.y+4);}});ctx.restore();}}
 function loop(){{tick();draw();requestAnimationFrame(loop);}}loop();
 function cxy(e){{const r=canvas.getBoundingClientRect();return{{x:e.clientX-r.left,y:e.clientY-r.top}};}}
 function hit(cx,cy){{const wx=(cx-tx)/tk,wy=(cy-ty)/tk;const vn=vis();for(let i=vn.length-1;i>=0;i--){{const n=vn[i];if(Math.hypot(n.x-wx,n.y-wy)<nr(n)+5)return n;}}return null;}}
@@ -145,8 +152,11 @@ document.getElementById('btn-rst').onclick=()=>{{tx=0;ty=0;tk=1;hl=null;nodes.fo
 document.getElementById('fg').addEventListener('change',e=>{{ag=e.target.value;hl=null;settled=false;iter=0;}});
 document.getElementById('sq').addEventListener('input',e=>{{st=e.target.value;hl=null;settled=false;iter=0;}});
 </script>
+</body>
+</html>
 """
 
+os.makedirs(STATIC_DIR, exist_ok=True)
 with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
     f.write(output)
 
