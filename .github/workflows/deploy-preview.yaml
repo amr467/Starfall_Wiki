@@ -7,9 +7,12 @@ on:
 jobs:
   sync-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Starfall_Wiki
         uses: actions/checkout@v4
+        with:
+          ref: v4
 
       - name: Checkout Starfall_Universe (vault)
         uses: actions/checkout@v4
@@ -17,6 +20,7 @@ jobs:
           repository: amr467/Starfall_Universe
           token: ${{ secrets.VAULT_ACCESS_TOKEN }}
           path: vault-temp
+          ref: main
 
       - name: Copy vault files into content/
         run: |
