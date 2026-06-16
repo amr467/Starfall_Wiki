@@ -20,10 +20,8 @@ jobs:
 
       - name: Copy vault files into content/
         run: |
-          mkdir -p content
-          cp vault-temp/*.md content/ 2>/dev/null || true
-          cp vault-temp/*.png content/ 2>/dev/null || true
-          rm -rf vault-temp
+          rsync -av --delete vault-temp/ content/
+   	  rm -rf vault-temp
 
       - name: Setup Node
         uses: actions/setup-node@v4
