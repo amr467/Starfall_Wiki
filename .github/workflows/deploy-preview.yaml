@@ -1,37 +1,43 @@
-name: Upload Preview Deployment
-on:
-  workflow_run:
-    workflows: ["Build Preview Deployment"]
-    types:
-      - completed
+name: Sync Vault and Deploy
 
-permissions:
-  actions: read
-  deployments: write
-  contents: read
-  pull-requests: write
+on:
+  repository_dispatch:
+    types: [vault-updated]
 
 jobs:
-  deploy-preview:
-    if: ${{ github.repository == 'jackyzha0/quartz' && github.event.workflow_run.conclusion == 'success' }}
+  sync-and-deploy:
     runs-on: ubuntu-latest
-    name: Deploy Preview to Cloudflare Pages
     steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v7
-        id: preview-build-artifact
-        with:
-          name: preview-build
-          path: build
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
+      - name: Checkout Starfall_Wiki
+        uses: actions/checkout@v4
 
-      - name: Deploy to Cloudflare Pages
-        uses: AdrianGonz97/refined-cf-pages-action@v1
+      - name: Checkout Starfall_Universe (vault)
+        uses: actions/checkout@v4
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          projectName: quartz
-          deploymentName: Branch Preview
-          directory: ${{ steps.preview-build-artifact.outputs.download-path }}
+          repository: amr467/Starfall_Universe
+          token: ${{ secrets.VAULT_ACCESS_TOKEN }}
+          path: vault-temp
+
+      - name: Copy vault files into content/
+        run: |
+          mkdir -p content
+          cp vault-temp/*.md content/ 2>/dev/null || true
+          cp vault-temp/*.png content/ 2>/dev/null || true
+          rm -rf vault-temp
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Quartz
+        run: npx quartz build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
