@@ -21,7 +21,7 @@ jobs:
       - name: Copy vault files into content/
         run: |
           rsync -av --delete vault-temp/ content/
-   	  rm -rf vault-temp
+          rm -rf vault-temp
 
       - name: Setup Node
         uses: actions/setup-node@v4
